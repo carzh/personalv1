@@ -1,15 +1,15 @@
 body {
-  background-color: #d3a9b4;
+  background-color: #e1b6c0;
   font-family: "Times New Roman", Times, serif;
   margin: 1rem;
 }
 
 ::-moz-selection {
-  background-color: #bcff5f;
+  background-color: #eaff58;
 }
 
 ::selection {
-  background-color: #bcff4f;
+  background-color: #eaff58;
 }
 
 a {
@@ -23,7 +23,7 @@ a:visited {
 }
 
 mark {
-  background: linear-gradient(to top, #bcff4f 50%, transparent 50%);
+  background: linear-gradient(to top, #eaff58 50%, transparent 50%);
 }
 
 li {
@@ -34,7 +34,6 @@ li {
   max-width: 500px;
   width: 80%;
   position: absolute;
-  /* margin: 0 auto; */
   top: 45%;
   left: 50%;
   -ms-transform: translate(-50%, -50%);
