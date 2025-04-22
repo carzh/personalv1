@@ -1,57 +1,70 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 
 exports.handler = async (event, context) => {
-    const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
-    const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+    const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+    const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+    const SPOTIFY_REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN;
 
-    // Get Spotify Access Token
-    const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Authorization: `Basic ${Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64')}`,
-        },
-        body: new URLSearchParams({ grant_type: 'client_credentials' }),
-    });
+    try {
+        // Step 1: Refresh the access token
+        const tokenResponse = await axios.post(
+            'https://accounts.spotify.com/api/token',
+            new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: SPOTIFY_REFRESH_TOKEN,
+            }).toString(),
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Authorization: `Basic ${Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
+                },
+            }
+        );
 
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
+        const accessToken = tokenResponse.data.access_token;
 
-    // Fetch Currently Playing Track
-    const currentlyPlayingResponse = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (currentlyPlayingResponse.status === 204 || currentlyPlayingResponse.status === 404) {
-        // No active playback or no track available
         return {
             statusCode: 200,
-            body: JSON.stringify({ currentlyPlaying: false }),
+            body: accessToken
         };
-    }
 
-    const currentlyPlayingData = await currentlyPlayingResponse.json();
+        // Step 2: Fetch currently playing track
+        const currentlyPlayingResponse = await axios.get('https://api.spotify.com/v1/me/player/currently-playing', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
 
-    if (currentlyPlayingData.is_playing) {
-        const track = currentlyPlayingData.item;
+        if (currentlyPlayingResponse.status === 204 || !currentlyPlayingResponse.data) {
+            // No track is currently playing
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ 
+                    currentlyPlaying: false,
+                    name: track.name,
+                    artist: track.artists.map((artist) => artist.name).join(', '),
+                    url: track.external_urls.spotify,
+                }),
+            };
+        }
+
+        const track = currentlyPlayingResponse.data.item;
+
+        // Return the currently playing track details
         return {
             statusCode: 200,
             body: JSON.stringify({
                 currentlyPlaying: true,
                 name: track.name,
-                artist: track.artists[0].name,
+                artist: track.artists.map((artist) => artist.name).join(', '),
                 url: track.external_urls.spotify,
             }),
         };
-    } else {
+    } catch (error) {
+        console.error('Error:', error.message);
         return {
-            statusCode: 200,
-            body: JSON.stringify({ 
-                currentlyPlaying: false,
-                name: track.name,
-                artist: track.artists[0].name,
-                url: track.external_urls.spotify,
-            }),
+            statusCode: 500,
+            body: JSON.stringify({ error: error.message }),
         };
     }
 };

@@ -4,7 +4,7 @@ async function fetchSpotifyData() {
         const response = await fetch('/.netlify/functions/spotify');
         
         if (!response.ok) {
-            throw new Error('Failed to fetch Spotify data');
+            throw new Error('Failed to fetch Spotify data' + response.text);
         }
 
         const data = await response.json();
